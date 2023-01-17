@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+        - batch_id: ${args.spark_job_name_prefix + sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+      # https://cloud.google.com/workflows/docs/http-requests
+    - run_spark_job:
+        call: http.post
+        # Spark Batch API doc --> https://cloud.google.com/dataproc-serverless/docs/reference/rest/v1/projects.locations.batches/create
+        args:
+          url: ${"https://dataproc.googleapis.com/v1/projects/" + args.project +"/locations/"+ args.dataproc_region + "/batches"}
+          auth:
+            type: OAuth2
+            scopes: "https://www.googleapis.com/auth/cloud-platform"
+          headers:
+            Content-Type: "application/json"
+          query:
+            batchId: ${batch_id}
+          body:
+            environmentConfig:
+              executionConfig:
+                serviceAccount: ${args.spark_service_account}
+                # Currently we're using the default network. On a Customer environment the subnetwork should be set
+                #subnetworkUri: " regions/<region>/subnetworks/<subnetwork>"
+            pysparkBatch:
+              jarFileUris: ${args.spark_dep_jars}
+              args: ${args.spark_job_args}
+              mainPythonFileUri: ${args.pyspark_file}
+            runtimeConfig:
+              version: ${args.dataproc_runtime_version}
+              properties: { }
+        result: response_message
+
+    - check_job:
+        call: http.get
+        args:
+          url: ${"https://dataproc.googleapis.com/v1/projects/"+ args.project +"/locations/"+ args.dataproc_region +"/batches/" + batch_id}
+          auth:
+            type: OAuth2
+        result: jobStatus
+    - check_job_done:
+        switch:
+          - condition: ${jobStatus.body.state == "SUCCEEDED"}
+            next: sql_aggregate_word_counts
+            #TODO: retry the job with expo backoff if it failed due to CPU quotas
+          - condition: ${jobStatus.body.state == "FAILED"}
+            raise: "Spark Job Failed"
+    - wait:
+        call: sys.sleep
+        args:
+          seconds: 30
+        next: check_job
+
+    - sql_aggregate_word_counts:
+        # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/jobs/query
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+          projectId: ${args.project}
+          body:
+            query: "CALL sandbox.aggregate_word_counts();"
+            useLegacySql: "false"
+
+    - the_end:
+        return: "SUCCESS"

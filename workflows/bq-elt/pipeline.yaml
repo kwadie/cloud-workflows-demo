@@ -1,0 +1,60 @@
+#
+#- init:
+#    assign:
+#      - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+#      - bucket_name: ""
+#      - object_name: ""
+#      - destination_object: ""
+#
+## All Cloud Workflows connectors to GCP products
+## https://cloud.google.com/workflows/docs/reference/googleapis
+#
+## All Cloud Workflows connectors for BigQuery
+## https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/Overview
+#
+#
+#- load_file_to_bq:
+#    # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/jobs/insert
+#    call: googleapis.bigquery.v2.jobs.insert
+#    args:
+#      projectId: ${project_id}
+#      body:
+#        # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview#jobconfiguration
+#        configuration:
+#          # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview#jobconfigurationload
+#          load:
+#            sourceUris: ["gs://path"]
+#            sourceFormat: PARQUET
+#            createDisposition: CREATE_IF_NEEDED
+#            writeDisposition: WRITE_APPEND
+#            # autodetect: true
+#            # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview#TableSchema
+#            schema:
+#              # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview#TableFieldSchema
+#              fields:
+#                [
+#                  {
+#                    "name": "customer_id",
+#                    "type": "STRING",
+#                  },
+#                  {
+#                    "name": "customer_email",
+#                    "type": "STRING",
+#                  }
+#                ]
+#            #https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/Overview#TableReference
+#            destinationTable:
+#              projectId: "project"
+#              datasetId: "dataset"
+#              tableId: "table"
+#
+#- sql_transform_1:
+#    # https://cloud.google.com/workflows/docs/reference/googleapis/bigquery/v2/jobs/query
+#    call: googleapis.bigquery.v2.jobs.query
+#    args:
+#      projectId: ${project_id}
+#      body:
+#        query: "SELECT 1"
+#
+#- the_end:
+#    return: "SUCCESS"

@@ -1,0 +1,17 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "word",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "word_count",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "input_file",
+    "type": "STRING"
+  }
+]

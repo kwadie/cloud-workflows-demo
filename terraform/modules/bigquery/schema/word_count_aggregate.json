@@ -1,0 +1,12 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "word",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "word_count",
+    "type": "INTEGER"
+  }
+]
