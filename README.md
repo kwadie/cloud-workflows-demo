@@ -130,11 +130,4 @@ To execute the wordcount pipeline, upload a text file to the `data` bucket creat
 cp gs://pub/shakespeare/rose.txt gs://<project>-data-wordcount/landing/rose.txt
 ```
 
-The object upload event will trigger the following steps
-* GCS object notification is published to PubSub, 
-* The push-subscription will publish the message as an HTTP request to Cloud Function
-* Cloud Function will trigger the wordcount Cloud Workflow while passing all the required parameters including the input file to be processed
-* Cloud Workflow will submit a serverless Spark job to Dataproc, if the job is successful the workflow
-  will submit a SQL query to BigQuery to run a stored procedure that aggregates data from the word_count_output table to word_count_aggreagte table
-
-
+The wordcount Cloud Workflow will populate BigQuery tables `sandbox.word_count_output` and `sandbox.word_count_aggregate`
