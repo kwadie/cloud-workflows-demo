@@ -6,3 +6,5 @@ terraform/.terraform
 terraform/*.tfvars
 
 /.idea
+
+.DS_Store

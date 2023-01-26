@@ -17,7 +17,7 @@
 #
 
 # exit script when errors occur
-set -e
+#set -e
 
 # set the working dir as the scripts directory
 cd "$(dirname "$0")"

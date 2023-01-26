@@ -6,6 +6,7 @@ locals {
     CLOUD_WORKFLOW_NAME : var.pipeline_name
     PYSPARK_FILE : "gs://${var.resource_bucket_name}/${google_storage_bucket_object.copy_spark_file.name}"
     SPARK_SERVICE_ACCOUNT : google_service_account.sa_spark.email
+    TRACKER_LOG_NAME: var.tracker_log_name
   }
 }
 
@@ -81,6 +82,7 @@ resource "google_project_iam_member" "sa_function_roles" {
   project  = var.project
   for_each = toset([
     "roles/workflows.invoker",
+    "roles/logging.logWriter"
   ])
   role   = each.key
   member = "serviceAccount:${google_service_account.sa_function.email}"
