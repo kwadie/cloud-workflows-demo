@@ -29,13 +29,13 @@ import functions_framework
 #             'objectId': 'nice-clap.gif',
 #             'payloadFormat': 'JSON_API_V1'
 #         },
-#         'data': 'ewogICJraW5kIjogInN0b3JhZ2Ujb2JqZWN0IiwKICAiaWQiOiAicGlwZWxpbmVzLXNhbmRib3gtZGF0YS13b3JkY291bnQvbmljZS1jbGFwLmdpZi8xNjczOTQzNzE4MjczMTIzIiwKICAic2VsZkxpbmsiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vc3RvcmFnZS92MS9iL3BpcGVsaW5lcy1zYW5kYm94LWRhdGEtd29yZGNvdW50L28vbmljZS1jbGFwLmdpZiIsCiAgIm5hbWUiOiAibmljZS1jbGFwLmdpZiIsCiAgImJ1Y2tldCI6ICJwaXBlbGluZXMtc2FuZGJveC1kYXRhLXdvcmRjb3VudCIsCiAgImdlbmVyYXRpb24iOiAiMTY3Mzk0MzcxODI3MzEyMyIsCiAgIm1ldGFnZW5lcmF0aW9uIjogIjEiLAogICJjb250ZW50VHlwZSI6ICJpbWFnZS9naWYiLAogICJ0aW1lQ3JlYXRlZCI6ICIyMDIzLTAxLTE3VDA4OjIxOjU4LjM2MFoiLAogICJ1cGRhdGVkIjogIjIwMjMtMDEtMTdUMDg6MjE6NTguMzYwWiIsCiAgInN0b3JhZ2VDbGFzcyI6ICJTVEFOREFSRCIsCiAgInRpbWVTdG9yYWdlQ2xhc3NVcGRhdGVkIjogIjIwMjMtMDEtMTdUMDg6MjE6NTguMzYwWiIsCiAgInNpemUiOiAiMTEyOTAwMSIsCiAgIm1kNUhhc2giOiAiR0p5T0pJSFovZklxdU9YaFI1aDh6QT09IiwKICAibWVkaWFMaW5rIjogImh0dHBzOi8vc3RvcmFnZS5nb29nbGVhcGlzLmNvbS9kb3dubG9hZC9zdG9yYWdlL3YxL2IvcGlwZWxpbmVzLXNhbmRib3gtZGF0YS13b3JkY291bnQvby9uaWNlLWNsYXAuZ2lmP2dlbmVyYXRpb249MTY3Mzk0MzcxODI3MzEyMyZhbHQ9bWVkaWEiLAogICJjcmMzMmMiOiAiRlV0TkV3PT0iLAogICJldGFnIjogIkNPUEF6cVdXenZ3Q0VBRT0iCn0K',
+#         'data': 'ewogICJraW5kIjogInN0b3',
 #         'messageId': '6730968907394344',
 #         'message_id': '6730968907394344',
 #         'publishTime': '2023-01-17T08:21:58.561Z',
 #         'publish_time': '2023-01-17T08:21:58.561Z'
 #     },
-#     'subscription': 'projects/pipelines-sandbox/subscriptions/wordcount-push'
+#     'subscription': 'projects/<project>/subscriptions/wordcount-push'
 # }
 @functions_framework.http
 def execute_cloud_workflow(request):
@@ -55,7 +55,7 @@ def execute_cloud_workflow(request):
     from google.cloud.workflows.executions_v1beta.types import Execution
     import json
     import os
-    import logging
+    from google.cloud import logging
 
     # These should be env variables
     project = os.environ.get('PROJECT')
@@ -65,18 +65,22 @@ def execute_cloud_workflow(request):
     spark_service_account = os.environ.get('SPARK_SERVICE_ACCOUNT')
     bq_output_table = os.environ.get('BQ_OUTPUT_TABLE')
     spark_temp_bucket = os.environ.get('SPARK_TEMP_BUCKET') # format bucket/path/ without gs://
+    tracker_log_name = os.environ.get('TRACKER_LOG_NAME')
+
+    logger = logging.Client().logger(tracker_log_name)
 
     request_json = request.get_json(silent=True)
 
-    print(f"request JSON: {request_json}")
-
+    pubsub_message_id = request_json['message']['messageId']
+    file_creation_time = request_json['message']['attributes']['eventTime']
     source_bucket = request_json['message']['attributes']['bucketId']
     source_object = request_json['message']['attributes']['objectId']
     source_file_path = f"gs://{source_bucket}/{source_object}"
 
-    logging.info(f"file: ${source_file_path}")
-
     execution_client = executions_v1beta.ExecutionsClient()
+
+    # use the message id as a trace to link this execution with the created workflow and later steps
+    tracker = pubsub_message_id
 
     workflow_arguments_dict = {
         "pyspark_file": pyspark_file,
@@ -89,7 +93,8 @@ def execute_cloud_workflow(request):
         "project": f"{project}",
         "dataproc_region": f"{region}",
         "spark_service_account": f"{spark_service_account}",
-        "spark_job_name_prefix": "wordcount-workflows-"
+        "spark_job_name_prefix": "wordcount-workflows-",
+        "tracker": tracker
     }
 
     # Initialize request argument(s)
@@ -99,11 +104,18 @@ def execute_cloud_workflow(request):
     )
 
     # Execute the workflow.
-    response = execution_client.create_execution(request)
+    workflow_response = execution_client.create_execution(request)
 
-    msg = f"Created execution: {response.name} for file {source_file_path}"
-    logging.info(msg)
-    print(msg)
+    result_dict = {
+        "file": source_file_path,
+        "file_creation_time": file_creation_time,
+        "workflow_execution": workflow_response.name,
+        "tracker": tracker,
+    }
+    logger.log_struct(
+        result_dict,
+        severity="INFO"
+    )
 
-    return msg
+    return result_dict
 

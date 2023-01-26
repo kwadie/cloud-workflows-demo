@@ -93,4 +93,13 @@ module "wordcount-pipeline" {
     BQ_OUTPUT_TABLE : "${module.bigquery.poc_dataset}.${module.bigquery.word_count_output_table_name}"
     SPARK_TEMP_BUCKET: "${google_storage_bucket.resources_bucket.name}/spark/temp/wordcount/"
   }
+  tracker_log_name = module.monitoring.cloud_functions_tracker_log
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  project = var.project
+  data_region = var.data_region
+  logging_dataset_name = "monitoring"
+  gcs_audit_bq_log_sink_buckets_exp = [module.wordcount-pipeline.gcs_data_bucket_name]
 }

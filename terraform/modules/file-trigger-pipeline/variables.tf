@@ -70,3 +70,7 @@ variable "topic_name" {
 variable "subscription_name" {
   type = string
 }
+
+variable "tracker_log_name" {
+  type = string
+}

@@ -36,6 +36,8 @@ main:
           query:
             batchId: ${batch_id}
           body:
+            labels:
+              tracker: ${args.tracker}
             environmentConfig:
               executionConfig:
                 serviceAccount: ${args.spark_service_account}

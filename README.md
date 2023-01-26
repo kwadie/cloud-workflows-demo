@@ -131,3 +131,8 @@ cp gs://pub/shakespeare/rose.txt gs://<project>-data-wordcount/landing/rose.txt
 ```
 
 The wordcount Cloud Workflow will populate BigQuery tables `sandbox.word_count_output` and `sandbox.word_count_aggregate`
+
+Run the below query to track the progress of file processing steps across the different GCP components:
+```roomsql
+SELECT * FROM monitoring.v_global_tracker
+```

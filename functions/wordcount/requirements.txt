@@ -2,3 +2,4 @@ functions-framework==3.2.1
 flask==2.1.0
 google-cloud-error-reporting==1.6.0
 google-cloud-workflows
+google-cloud-logging
