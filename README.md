@@ -127,7 +127,7 @@ gcloud compute networks subnets update <SUBNETWORK> \
 To execute the wordcount pipeline, upload a text file to the `data` bucket created by Terraform
 
 ```shell
-cp gs://pub/shakespeare/rose.txt gs://<project>-data-wordcount/landing/rose.txt
+gsutil cp gs://pub/shakespeare/rose.txt gs://<project>-data-wordcount/landing/rose.txt
 ```
 
 The wordcount Cloud Workflow will populate BigQuery tables `sandbox.word_count_output` and `sandbox.word_count_aggregate`
